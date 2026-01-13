@@ -1,41 +1,43 @@
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-2.5-flash-lite"
+MODEL_NAME = "gemini-2.5-flash"
 
 class RosterAgent:
     def __init__(self, api_key):
         self.client = genai.Client(api_key=api_key)
 
-    def generate_roster(self, sys_rules, hard_rules, soft_rules, history):
+    def generate_roster(self, sys_rules, hard_rules, soft_rules, history, shift_repo):
         past_context = ""
         for i, entry in enumerate(history[-2:]):
-            past_context += f"\n--- Previous Version {i+1} ---\n{entry}\n"
+            past_context += f"\n[PAST VERSION {i+1}]:\n{entry}\n"
+
+        # Dynamically inject the shifts you defined in app.py
+        allowed_shifts = ", ".join(shift_repo.keys())
 
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
-        GOAL: Create a 7-day roster for 10 staff members.
+        GOAL: Generate a 7-day roster.
+
+        ALLOWED SHIFTS: {"Morning","Evening","Night"}
 
         STAFF: Mark (Doc), Shawn (Anesth), Axel/Sarah (Surgeons), Elena/David/Chloe/James/Maya/Leo (Nurses).
 
-        FORMAT:
-        Output a Markdown table with EXACTLY these 9 columns:
-        | Name | Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
-        | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+        FORMATTING:
+        - Column 1: **Name** <br><small>Designation</small>
+        - Columns 2-8: Mon, Tue, Wed, Thu, Fri, Sat, Sun.
 
         CONSTRAINTS:
         - SYSTEM: {sys_rules}
         - HARD: {hard_rules}
         - SOFT: {soft_rules}
-        - MANDATORY: Every person MUST have exactly one "OFF" day.
 
-        SESSION MEMORY:
-        {past_context if past_context else "No history."}
+        HISTORY:
+        {past_context if past_context else "Initial run."}
 
-        INSTRUCTIONS:
-        1. Start IMMEDIATELY with the Markdown table. No code blocks.
-        2. Use labels: "Morning", "Afternoon", "Night", or "OFF".
-        3. Finish with a 'Compliance Report' verifying the "OFF" day rule.
+        MANDATORY FINAL TASK:
+        Perform a 'Self-Audit Compliance Report' after the table. 
+        Verify if every row and column meets the provided rules.
         """
 
         try:
@@ -46,9 +48,4 @@ class RosterAgent:
             )
             return resp.text
         except Exception as e:
-            if "503" in str(e):
-                return "🚨 **Server Overloaded (503):** Gemini is busy. Please try clicking 'Generate' again in a few seconds."
-
-            return f"🚨 **API Error:** {str(e)}"
-
-
+            return f"🚨 API Error: {str(e)}"
