@@ -15,7 +15,7 @@ class RosterAgent:
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
         TASK: Create a 7-day roster.
-        ALLOWED SHIFTS: {", ".join(shift_repo)} or OFF.
+        SHIFT NAMES: {", ".join(shift_repo)} or OFF.
 
         STRICT FORMATTING:
         - Markdown table, EXACTLY 8 columns.
@@ -24,9 +24,9 @@ class RosterAgent:
         STAFF: Mark (Doc), Shawn (Anesth), Axel (Surgeon), Sarah (Surgeon), Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
 
         RULES:
-        🛠️ [SYSTEM]: {sys_rules}
-        ⛔ [HARD]: {hard_rules}
-        💡 [SOFT]: {soft_rules}
+        [SYSTEM]: {sys_rules}
+        [HARD]: {hard_rules}
+        [SOFT]: {soft_rules}
 
         HISTORY: {past_context if past_context else "Initial run."}
 
