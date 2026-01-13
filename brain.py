@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-2.5-flash-lite"
+MODEL_NAME = "gemini-2.5-flash"
 
 class RosterAgent:
     def __init__(self, api_key):
@@ -10,7 +10,7 @@ class RosterAgent:
     def generate_roster(self, sys_rules, hard_rules, soft_rules, history, shift_repo):
         past_context = ""
         for i, entry in enumerate(history[-2:]):
-            past_context += f"\n[PREVIOUS VERSION {i+1}]:\n{entry}\n"
+            past_context += f"\n[VERSION {i+1}]:\n{entry}\n"
 
         allowed_shifts = ", ".join(shift_repo)
 
@@ -21,15 +21,15 @@ class RosterAgent:
 
         STAFF: Mark (Doc), Shawn (Anesth), Axel (Surgeon), Sarah (Surgeon), Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
 
-        OUTPUT INSTRUCTIONS:
-        1. Produce a Markdown table with EXACTLY these 9 columns: 
-           | Name | Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
-        2. Do NOT use HTML tags in the table.
-        3. Use only the allowed shifts or "OFF".
-        4. Provide a 'Compliance Report' as a separate list below the table.
+        TABLE FORMAT:
+        | Name | Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+
+        INSTRUCTIONS:
+        1. Fill the table using only the allowed shifts or "OFF".
+        2. Do not use HTML inside the table cells.
+        3. Perform a 'Self-Audit Compliance Report' after the table.
 
         RULES: {sys_rules} | {hard_rules} | {soft_rules}
-        HISTORY: {past_context if past_context else "None."}
         """
 
         try:
@@ -39,4 +39,4 @@ class RosterAgent:
             )
             return resp.text
         except Exception as e:
-            return f"🚨 Error: {str(e)}"
+            return f"🚨 AI Error: {str(e)}"

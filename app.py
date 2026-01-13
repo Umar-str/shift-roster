@@ -4,93 +4,85 @@ import io
 import re
 from brain import RosterAgent
 
-# --- 1. CONFIG ---
+# --- 1. SHIFT REPOSITORY ---
 SHIFT_REPO = ["Morning", "Evening", "Night", "OFF"]
 
-st.set_page_config(page_title="Roster Master", layout="wide")
+st.set_page_config(page_title="Roster Lab", layout="wide")
 
+# CSS to ensure the <small> tag works and the table looks clean
 st.markdown("""
 <style>
-    .stTextArea textarea { border: 2px solid #007BFF !important; border-radius: 8px; }
-    [data-testid="column"] { background-color: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #dee2e6; }
+    .stTextArea textarea { border: 2px solid #007BFF !important; }
+    small { color: #6c757d; font-size: 0.85em; display: block; }
     th { background-color: #007BFF !important; color: white !important; }
-    small { color: #6c757d; font-size: 0.85em; display: block; line-height: 1.2; }
+    table { width: 100% !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGIC ---
+# --- 2. LOGIC & STATE ---
 if "history" not in st.session_state: st.session_state.history = []
 if "latest_roster" not in st.session_state: st.session_state.latest_roster = ""
 if "roster_agent" not in st.session_state:
     st.session_state.roster_agent = RosterAgent(st.secrets["GEMINI_API_KEY"])
 
-# --- 3. SIDEBAR ---
+# --- 3. SIDEBAR (Reference & History) ---
 with st.sidebar:
-    st.title("🏥 Roster Hub")
+    st.title("🏥 Control Center")
     with st.expander("👨‍⚕️ Staff Reference", expanded=True):
-        st.markdown("- **Mark** (Doc)\n- **Shawn** (Anesth)\n- **Axel/Sarah** (Surg)\n- **Nurses**: Elena, David, Chloe, James, Maya, Leo")
+        st.markdown("**Docs:** Mark, Shawn\n\n**Surgeons:** Axel, Sarah\n\n**Nurses:** Elena, David, Chloe, James, Maya, Leo")
     
     st.divider()
-    if st.button("🔄 Reset Memory"):
+    if st.button("🔄 Clear All History"):
         st.session_state.history = []
-        st.session_state.latest_roster = ""
         st.rerun()
 
-    st.subheader("📜 History")
-    for i, content in enumerate(reversed(st.session_state.history)):
+    st.subheader("📜 Version History")
+    for i, version_md in enumerate(reversed(st.session_state.history)):
         with st.expander(f"Version {len(st.session_state.history)-i}"):
-            st.markdown(content, unsafe_allow_html=True)
+            st.markdown(version_md, unsafe_allow_html=True)
 
-# --- 4. INPUTS ---
-st.title("Surgery Unit: Roster Lab")
+# --- 4. MAIN INTERFACE ---
+st.title("Surgery Unit Roster Lab")
+
 c1, c2, c3 = st.columns(3)
 with c1: sys_r = st.text_area("🛡️ System Rules", value="- Exactly 1 OFF day per person.", height=150)
-with c2: hard_r = st.text_area("🛑 Hard Rules", value="- Mark works Day shifts.", height=150)
+with c2: hard_r = st.text_area("🛑 Hard Rules", value="- Mark works Days.", height=150)
 with c3: soft_r = st.text_area("✨ Soft Rules", value="- Elena prefers Morning.", height=150)
 
-if st.button("🚀 Generate Draft", type="primary", use_container_width=True):
-    with st.spinner("AI Audit in progress..."):
-        res = st.session_state.roster_agent.generate_roster(sys_r, hard_r, soft_r, st.session_state.history, SHIFT_REPO)
-        st.session_state.latest_roster = res
+if st.button("🚀 Generate New Roster", type="primary", use_container_width=True):
+    with st.spinner("AI Generating & Auditing..."):
+        st.session_state.latest_roster = st.session_state.roster_agent.generate_roster(
+            sys_r, hard_r, soft_r, st.session_state.history, SHIFT_REPO
+        )
 
-# --- 5. EDITOR & FORMATTER ---
+# --- 5. THE DRAFT & SAVE MECHANISM ---
 if st.session_state.latest_roster:
     st.divider()
+    st.subheader("📋 AI Draft Preview")
     
-    # Extract just the table from the AI response (ignores the compliance report for editing)
+    # Render the AI's output (includes the compliance report)
+    st.markdown(st.session_state.latest_roster, unsafe_allow_html=True)
+
+    # Logic to extract the table and save a formatted version
     table_match = re.search(r'(\|.*\|[\s\S]*?\|)', st.session_state.latest_roster)
     
     if table_match:
-        st.subheader("✏️ Manual Edit Mode")
-        table_md = table_match.group(1)
-        
-        try:
-            df = pd.read_html(io.StringIO(table_md), flavor='bs4')[0]
-            
-            # This grid will now show dropdowns correctly
-            edited_df = st.data_editor(
-                df,
-                column_config={
-                    col: st.column_config.SelectboxColumn(options=SHIFT_REPO) 
-                    for col in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-                },
-                hide_index=True, use_container_width=True
-            )
-
-            if st.button("💾 Save & Format to History", type="primary"):
-                # COMBINE NAME AND ROLE FOR DISPLAY
-                final_df = edited_df.copy()
-                final_df["Name"] = final_df.apply(lambda x: f"**{x['Name']}** <br><small>{x['Designation']}</small>", axis=1)
-                final_df = final_df.drop(columns=["Designation"])
+        if st.button("💾 Save as New Version", type="primary", use_container_width=True):
+            try:
+                # Parse the raw table to format it
+                df = pd.read_html(io.StringIO(table_match.group(1)), flavor='bs4')[0]
                 
-                final_md = final_df.to_markdown(index=False)
-                st.session_state.history.append(final_md)
-                st.session_state.latest_roster = "" # Clear view to show success
-                st.success("Committed to Session History!")
+                # MERGE Name + Designation into the "Clean" multiline format
+                df["Name"] = df.apply(lambda x: f"**{x['Name']}**<br><small>{x['Designation']}</small>", axis=1)
+                df = df.drop(columns=["Designation"])
+                
+                # Convert back to Markdown and save to history
+                formatted_md = df.to_markdown(index=False)
+                st.session_state.history.append(formatted_md)
+                st.session_state.latest_roster = "" # Clear draft after saving
+                st.success("Version saved to sidebar!")
                 st.rerun()
-                
-        except Exception:
-            st.warning("Table format complexity high. Showing raw preview:")
-            st.markdown(st.session_state.latest_roster, unsafe_allow_html=True)
-    else:
-        st.markdown(st.session_state.latest_roster, unsafe_allow_html=True)
+            except:
+                st.error("Could not format table. Saving raw version instead.")
+                st.session_state.history.append(st.session_state.latest_roster)
+                st.rerun()
