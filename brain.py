@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.5-flash-lite"
 
 class RosterAgent:
     def __init__(self, api_key):
@@ -50,4 +50,5 @@ class RosterAgent:
                 return "🚨 **Server Overloaded (503):** Gemini is busy. Please try clicking 'Generate' again in a few seconds."
 
             return f"🚨 **API Error:** {str(e)}"
+
 
