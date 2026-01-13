@@ -1,70 +1,73 @@
-# MUST BE AT THE VERY TOP for Streamlit Cloud
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-
 import streamlit as st
-import brain
+import pandas as pd
+import io
+from brain import RosterAgent
 
-st.set_page_config(page_title="Perk AI | Expert Mode", layout="wide")
+st.set_page_config(page_title="Hospital Roster AI", layout="wide")
 
-# Initialize the RAG Agent
-if "agent" not in st.session_state:
-    st.session_state.agent = brain.PerkAgent(st.secrets["GEMINI_API_KEY"])
+# Initialize Roster Agent & History
+if "roster_agent" not in st.session_state:
+    st.session_state.roster_agent = RosterAgent(st.secrets["GEMINI_API_KEY"])
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+st.title("🏥 Smart Hospital Roster Generator")
 
-# --- SIDEBAR: KNOWLEDGE & CONTROLS ---
+# Sidebar for History
 with st.sidebar:
-    st.title("📂 Knowledge Base")
-    file = st.file_uploader("Upload Policy (.txt)", type="txt")
-    if file and st.button("Index Documents", use_container_width=True):
-        with st.status("Embedding...", expanded=False):
-            count = st.session_state.agent.add_documents(file.getvalue().decode("utf-8"))
-        st.success(f"Indexed {count} lines!")
+    st.header("📜 Roster History")
+    if st.button("Clear History"):
+        st.session_state.history = []
+    for i, entry in enumerate(st.session_state.history):
+        st.write(f"Version {i+1}: {entry['timestamp']}")
 
-    st.divider()
-    
-    st.header("⚙️ Model Tuning")
-    sys_p = st.text_area("System Prompt", 
-                         value="Be a context reportee. Use information given only in context to address user query.",
-                         height=100)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        temp = st.slider("Temperature", 0.0, 1.0, 0.2)
-        top_p = st.slider("Top P", 0.0, 1.0, 0.9)
-    with col2:
-        max_t = st.number_input("Max Tokens", 10, 2000, 500)
-        stop_s = st.text_input("Stop Seq (csv)", placeholder="e.g. END")
+# Input Layout
+col1, col2, col3 = st.columns(3)
+with col1:
+    sys_rules = st.text_area("System Rules (Mandatory)", value="Min 2 nurses per night shift.")
+with col2:
+    hard_rules = st.text_area("Hard Rules (Strict)", value="Mark cannot work Mondays.")
+with col3:
+    soft_rules = st.text_area("Soft Rules (Preferences)", value="Elena prefers mornings.")
 
-    # Bundle settings for the agent
-    ui_settings = {
-        "system_prompt": sys_p,
-        "temperature": temp,
-        "top_p": top_p,
-        "max_tokens": max_t,
-        "sequences": stop_s
-    }
-
-# --- MAIN CHAT ---
-st.title("Your Custom AI")
-
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-if prompt := st.chat_input("Ask about the policy..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        with st.status("Thinking...") as status:
-            # Pass BOTH the prompt and the UI settings
-            response = st.session_state.agent.ask(prompt, ui_settings)
-            status.update(label="Complete", state="complete")
+if st.button("Generate Roster", type="primary"):
+    with st.spinner("Analyzing history and creating new roster..."):
+        # Pass history to the agent
+        result = st.session_state.roster_agent.generate_roster(
+            sys_rules, hard_rules, soft_rules, st.session_state.history
+        )
         
-        st.markdown(response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        # Save to history
+        import datetime
+        st.session_state.history.append({
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "content": result
+        })
+        
+        st.markdown(result)
+
+# Export to Excel Section
+if st.session_state.history:
+    st.divider()
+    st.subheader("📥 Export Latest Roster")
+    
+    # Simple logic to try and parse the MD table for Excel export
+    last_roster = st.session_state.history[-1]['content']
+    try:
+        # Extract table part (crude markdown to list parsing)
+        tables = pd.read_html(io.StringIO(last_roster), flavor='bs4')
+        if tables:
+            df = tables[0]
+            
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='Roster')
+            
+            st.download_button(
+                label="Download as Excel",
+                data=buffer.getvalue(),
+                file_name="hospital_roster.xlsx",
+                mime="application/vnd.ms-excel"
+            )
+    except:
+        st.info("Generating exportable table...")
