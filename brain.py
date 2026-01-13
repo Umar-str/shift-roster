@@ -3,7 +3,7 @@ from google import genai
 from google.genai import types
 
 # Use the standard stable name for Gemini 3 series in 2026
-MODEL_NAME = "gemini-3-flash-preview"
+MODEL_NAME = "gemini-2.5-flash-lite"
 
 class RosterAgent:
     def __init__(self, api_key):
@@ -88,4 +88,5 @@ class RosterAgent:
         except Exception as e:
             # Catching and returning the specific error for UI debugging
             return f"🚨 **Gemini API Error:** {str(e)}\n\n*Check your API key and quota in the Streamlit Secrets.*"
+
 
