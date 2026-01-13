@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import io
-import re
 from brain import RosterAgent
 
 # --- CONFIG ---
@@ -76,25 +75,26 @@ if st.button("🚀 Generate Roster Draft", type="primary", use_container_width=T
 if st.session_state.latest_draft:
     st.divider()
     
-    # Header area with Export Button
     head_col1, head_col2 = st.columns([0.8, 0.2])
     with head_col1:
         st.subheader("📋 Current Draft Preview")
     
-    # Export to CSV Logic
-    table_match = re.search(r'(\|.*\|[\s\S]*?\|)', st.session_state.latest_draft)
-    if table_match:
-        try:
-            df_export = pd.read_html(io.StringIO(table_match.group(1)), flavor='bs4')[0]
+    # IMPROVED EXPORT LOGIC: No more strict regex failure
+    try:
+        # We try to read any table found in the text
+        df_list = pd.read_html(io.StringIO(st.session_state.latest_draft), flavor='bs4')
+        if df_list:
+            df_export = df_list[0]
             csv = df_export.to_csv(index=False).encode('utf-8')
             with head_col2:
-                st.download_button("📥 Export to CSV", data=csv, file_name="roster_export.csv", mime="text/csv")
-        except:
-            pass
+                st.download_button("📥 Export to CSV", data=csv, file_name="roster.csv", mime="text/csv", use_container_width=True)
+    except:
+        with head_col2:
+            st.warning("⚠️ CSV unavailable")
 
     st.markdown(st.session_state.latest_draft, unsafe_allow_html=True)
 
-    if st.button("💾 Save to Sidebar History", use_container_width=True):
+    if st.button("💾 Save to Sidebar History", type="primary", use_container_width=True):
         st.session_state.history.append(st.session_state.latest_draft)
         st.success(f"Version {len(st.session_state.history)} saved!")
         st.rerun()
