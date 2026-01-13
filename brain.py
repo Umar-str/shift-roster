@@ -1,14 +1,13 @@
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.5-flash-lite"
 
 class RosterAgent:
     def __init__(self, api_key):
         self.client = genai.Client(api_key=api_key)
 
     def generate_roster(self, sys_rules, hard_rules, soft_rules, history, shift_repo):
-        # Build context from the additive history
         past_context = ""
         for i, entry in enumerate(history):
             past_context += f"\n--- VERSION {i+1} ---\n{entry}\n"
@@ -21,10 +20,9 @@ class RosterAgent:
         ALLOWED SHIFTS: {"Morning","Evening","Night"} or OFF.
 
         STRICT FORMATTING:
-        - Output a Markdown table with EXACTLY 8 columns: | Name & Role | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
-        - Inside the 'Name & Role' cell, use this format: **Name** <br><small>Designation</small>
-        - Do NOT create a separate column for Designation.
-
+        - Output a Markdown table with EXACTLY 8 columns.
+        - 'Name & Role' column must use: **Name** <br><small>Designation</small>
+        
         STAFF: Mark (Doc), Shawn (Anesth), Axel (Surgeon), Sarah (Surgeon), Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
 
         RULES:
@@ -32,8 +30,10 @@ class RosterAgent:
         [HARD]: {hard_rules}
         [SOFT]: {soft_rules}
 
-        SESSION HISTORY (Reference for changes):
+        SESSION HISTORY:
         {past_context if past_context else "Initial run."}
+
+        MANDATORY: Provide a 'Self-Audit Compliance Report' after the table.
         """
 
         try:
