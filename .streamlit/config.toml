@@ -1,15 +1,11 @@
 [theme]
-# A professional medical blue/cyan for buttons and sliders
-primaryColor = "#00d4ff" 
-
-# Deep charcoal background (easier to read code/tables)
-backgroundColor = "#0d1117" 
-
-# Darker secondary background for the sidebar
-secondaryBackgroundColor = "#161b22" 
-
-# High-contrast white for the text
-textColor = "#e6edf3" 
-
-# Clean, modern font
+primaryColor = "#007BFF"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
 font = "sans serif"
+
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = false
