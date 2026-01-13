@@ -1,59 +1,51 @@
-from google import genai
-from google.genai import types
+import streamlit as st
+from brain import RosterAgent
 
-MODEL_NAME = "gemini-1.5-flash"
+st.set_page_config(page_title="Roster Lab", layout="wide")
 
-class RosterAgent:
-    def __init__(self, api_key):
-        self.client = genai.Client(api_key=api_key, vertexai=False)
+# Initialize Logic
+if "roster_agent" not in st.session_state:
+    if "GEMINI_API_KEY" in st.secrets:
+        st.session_state.roster_agent = RosterAgent(st.secrets["GEMINI_API_KEY"])
+    else:
+        st.error("API Key missing! Add GEMINI_API_KEY to your Secrets.")
 
-    def generate_roster(self, sys_rules, hard_rules, soft_rules, history):
-        # Format history for context
-        past_context = "\n".join(history[-2:]) if history else "No previous history."
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "latest_output" not in st.session_state:
+    st.session_state.latest_output = ""
 
-        prompt = f"""
-        ACT AS: Senior Hospital Staffing Coordinator.
-        
-        STAFF LIST (10 Employees):
-        1. Mark (Doctor - Lead)
-        2. Shawn (Anesthesiologist)
-        3. Axel (Surgeon)
-        4. Sarah (Surgeon)
-        5. Elena (Nurse)
-        6. David (Nurse)
-        7. Chloe (Nurse)
-        8. James (Nurse)
-        9. Maya (Nurse)
-        10. Leo (Nurse)
+st.title("🏥 Surgery Unit Roster Lab")
 
-        REQUIRED FORMAT:
-        A Markdown table with exactly these columns:
-        [Employee Name & Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun]
+# Input Fields
+c1, c2, c3 = st.columns(3)
+with c1:
+    sys_r = st.text_area("System Rules", value="- Exactly 1 Holiday (OFF) per person.", height=150)
+with c2:
+    hard_r = st.text_area("Hard Rules", value="- Mark (Doctor) works Day shifts.", height=150)
+with c3:
+    soft_r = st.text_area("Soft Rules", value="- Elena prefers mornings.", height=150)
 
-        CONSTRAINTS:
-        - SYSTEM: {sys_rules}
-        - HARD: {hard_rules}
-        - SOFT: {soft_rules}
-        - MANDATORY: Every single person MUST have exactly one "OFF" day.
+if st.button("Generate Roster", type="primary", use_container_width=True):
+    with st.spinner("AI is calculating..."):
+        res = st.session_state.roster_agent.generate_roster(sys_r, hard_r, soft_r, st.session_state.history)
+        st.session_state.latest_output = res
+        st.session_state.history.append(res)
 
-        HISTORY CONTEXT:
-        {past_context}
+# Display Latest Output
+if st.session_state.latest_output:
+    st.divider()
+    st.info("💡 Highlight the table below and press Ctrl+C to copy into Excel.")
+    st.markdown(st.session_state.latest_output)
 
-        INSTRUCTIONS:
-        - Use "Morning", "Afternoon", "Night", and "OFF" as shift labels.
-        - Ensure every row starts with the Name and Designation (e.g., 'Mark (Doctor)').
-        - Provide a 'Compliance Report' after the table.
-        """
-
-        try:
-            resp = self.client.models.generate_content(
-                model=MODEL_NAME,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.1,
-                    thinking_config=types.ThinkingConfig(include_thoughts=False)
-                )
-            )
-            return resp.text
-        except Exception as e:
-            return f"🚨 API Error: {str(e)}"
+# History Management
+with st.sidebar:
+    st.header("📜 Session History")
+    if st.button("Reset Session"):
+        st.session_state.history = []
+        st.session_state.latest_output = ""
+        st.rerun()
+    
+    for i, content in enumerate(reversed(st.session_state.history)):
+        with st.expander(f"Version {len(st.session_state.history)-i}"):
+            st.markdown(content)
