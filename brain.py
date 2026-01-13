@@ -14,7 +14,7 @@ class RosterAgent:
 
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
-        GOAL: Create a 7-day roster (Mon-Sun) for 10 staff members.
+        GOAL: Create a 7-day roster for 10 staff members.
 
         STAFF: Mark (Doc), Shawn (Anesth), Axel/Sarah (Surgeons), Elena/David/Chloe/James/Maya/Leo (Nurses).
 
@@ -30,7 +30,7 @@ class RosterAgent:
         - MANDATORY: Every person MUST have exactly one "OFF" day.
 
         SESSION MEMORY:
-        {past_context if past_context else "No history yet."}
+        {past_context if past_context else "No history."}
 
         INSTRUCTIONS:
         1. Start IMMEDIATELY with the Markdown table. No code blocks.
@@ -47,5 +47,5 @@ class RosterAgent:
             return resp.text
         except Exception as e:
             if "503" in str(e):
-                return "🚨 **Server Overloaded (503):** Gemini is busy. Please click the button again in 5 seconds."
+                return "🚨 **Server Overloaded (503):** Gemini is busy. Please try clicking 'Generate' again in a few seconds."
             return f"🚨 **API Error:** {str(e)}"
