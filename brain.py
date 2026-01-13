@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.5-flash-lite"
 
 class RosterAgent:
     def __init__(self, api_key):
@@ -19,7 +19,9 @@ class RosterAgent:
         GOAL: Create a 7-day roster.
         SHIFT OPTIONS: {"Morning","Evening","Night"}
 
-        STAFF: Mark (Doc), Shawn (Anesth), Axel/Sarah (Surgeons), Elena/David/Chloe/James/Maya/Leo (Nurses).
+        STAFF LIST:
+        Mark (Doc), Shawn (Anesth), Axel (Surgeon), Sarah (Surgeon), 
+        Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
 
         FORMATTING RULES:
         1. Name Column: Use exactly: **Name** <br><small>Designation</small>

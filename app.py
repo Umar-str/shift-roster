@@ -38,11 +38,28 @@ if "roster_agent" not in st.session_state:
     else:
         st.error("Missing API Key in Secrets.")
 
-# --- 4. Sidebar: History & Reset ---
+# --- 4. Sidebar: Staff Reference, History & Reset ---
 with st.sidebar:
-    st.title("⚙️ Roster Settings")
-    st.subheader("Shift Repository")
-    st.code(SHIFT_REPO)
+    st.title("🏥 Roster Controls")
+    
+    # NEW: Reference Staff List
+    with st.expander("👨‍⚕️ Staff Reference", expanded=True):
+        st.markdown("""
+        **Doctors/Anesthesiology**
+        - Mark (Doc)
+        - Shawn (Anesth)
+        
+        **Surgeons**
+        - Axel
+        - Sarah
+        
+        **Nurses**
+        - Elena, David, Chloe, 
+        - James, Maya, Leo
+        """)
+
+    with st.expander("📝 Shift Repository"):
+        st.code(SHIFT_REPO)
     
     st.divider()
     if st.button("🔄 Reset Memory", use_container_width=True):
@@ -55,14 +72,14 @@ with st.sidebar:
         with st.expander(f"Version {len(st.session_state.history)-i}"):
             st.text_area("Copyable content", value=content, height=200, key=f"hist_{i}")
 
-# --- 5. Inputs Area ---
-st.title("🏥 Surgery Unit Roster Generator")
+# --- 5. Main Inputs Area ---
+st.title("Surgery Unit Roster Lab")
 
 col1, col2, col3 = st.columns(3)
 with col1:
     sys_r = st.text_area("🛡️ System Rules", value="- Exactly 1 OFF day per person.", height=150)
 with col2:
-    hard_r = st.text_area("🛑 Hard Rules", value="- Mark works Days.", height=150)
+    hard_r = st.text_area("🛑 Hard Rules", value="- Mark works Day shifts.", height=150)
 with col3:
     soft_r = st.text_area("✨ Soft Rules", value="- Elena prefers Morning.", height=150)
 
@@ -76,8 +93,8 @@ if st.button("🚀 Generate Draft with AI", type="primary", use_container_width=
 # --- 6. The Editor & Versioning ---
 if st.session_state.latest_roster:
     st.divider()
-    st.subheader("✏️ Manual Review & Edit")
-    st.caption("Click any cell to change the shift assignment.")
+    st.subheader("✏️ Interactive Roster Editor")
+    st.caption("Click any cell to change the shift via dropdown.")
     
     try:
         # Convert AI markdown to a Pandas Dataframe
@@ -95,12 +112,10 @@ if st.session_state.latest_roster:
         )
 
         if st.button("💾 Save Changes & Commit to History", type="primary"):
-            # Store the final version in history
             final_md = edited_df.to_markdown(index=False)
             st.session_state.history.append(final_md)
-            st.success("Version saved to history!")
+            st.success("Version saved!")
             st.rerun()
 
     except Exception:
-        # Fallback if markdown is unparseable
         st.markdown(st.session_state.latest_roster)
