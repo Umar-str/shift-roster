@@ -12,12 +12,10 @@ class RosterAgent:
         for i, entry in enumerate(history):
             past_context += f"\n--- VERSION {i+1} ---\n{entry}\n"
 
-        allowed_shifts = ", ".join(shift_repo)
-
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
         TASK: Create a 7-day roster.
-        ALLOWED SHIFTS: {"Morning","Evening","Night"} or OFF.
+        ALLOWED SHIFTS: {", ".join(shift_repo)} or OFF.
 
         STRICT FORMATTING:
         - Markdown table, EXACTLY 8 columns.
@@ -26,9 +24,9 @@ class RosterAgent:
         STAFF: Mark (Doc), Shawn (Anesth), Axel (Surgeon), Sarah (Surgeon), Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
 
         RULES:
-        [SYSTEM]: {sys_rules}
-        [HARD]: {hard_rules}
-        [SOFT]: {soft_rules}
+        🛠️ [SYSTEM]: {sys_rules}
+        ⛔ [HARD]: {hard_rules}
+        💡 [SOFT]: {soft_rules}
 
         HISTORY: {past_context if past_context else "Initial run."}
 

@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+import re
 from brain import RosterAgent
 
 # --- CONFIG ---
@@ -25,7 +26,7 @@ if "latest_draft" not in st.session_state:
 if "roster_agent" not in st.session_state:
     st.session_state.roster_agent = RosterAgent(st.secrets["GEMINI_API_KEY"])
 
-# --- SIDEBAR ---
+# --- SIDEBAR (History & Reference Intact) ---
 with st.sidebar:
     st.title("🏥 Roster Hub")
     
@@ -75,23 +76,32 @@ if st.button("🚀 Generate Roster Draft", type="primary", use_container_width=T
 if st.session_state.latest_draft:
     st.divider()
     
+    # Header area with Export Button
     head_col1, head_col2 = st.columns([0.8, 0.2])
     with head_col1:
         st.subheader("📋 Current Draft Preview")
     
-    # IMPROVED EXPORT LOGIC: No more strict regex failure
-    try:
-        # We try to read any table found in the text
-        df_list = pd.read_html(io.StringIO(st.session_state.latest_draft), flavor='bs4')
-        if df_list:
-            df_export = df_list[0]
+    # Enhanced Export Logic
+    # 1. We look for anything that looks like a table row starting with |
+    table_lines = [line for line in st.session_state.latest_draft.split('\n') if line.strip().startswith('|')]
+    if len(table_lines) > 2: # Header + Separator + at least 1 row
+        try:
+            # Join the extracted lines and read into a dataframe
+            table_str = '\n'.join(table_lines)
+            df_export = pd.read_html(io.StringIO(table_str), flavor='bs4')[0]
+            
+            # Clean Designation tags for CSV cleanliness
+            df_export.columns = [re.sub('<[^<]+?>', '', col) for col in df_export.columns]
+            df_export = df_export.map(lambda x: re.sub('<[^<]+?>', ' ', str(x)) if isinstance(x, str) else x)
+            
             csv = df_export.to_csv(index=False).encode('utf-8')
             with head_col2:
-                st.download_button("📥 Export to CSV", data=csv, file_name="roster.csv", mime="text/csv", use_container_width=True)
-    except:
-        with head_col2:
-            st.warning("⚠️ CSV unavailable")
+                st.download_button("📥 Export to CSV", data=csv, file_name="hospital_roster.csv", mime="text/csv", use_container_width=True)
+        except:
+            # Fallback for complex markdown
+            pass
 
+    # Render the Draft with HTML support for the subtext
     st.markdown(st.session_state.latest_draft, unsafe_allow_html=True)
 
     if st.button("💾 Save to Sidebar History", type="primary", use_container_width=True):
