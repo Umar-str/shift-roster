@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-2.5-flash-lite"
+MODEL_NAME = "gemini-2.0-flash"
 
 class RosterAgent:
     def __init__(self, api_key):
@@ -43,4 +43,5 @@ class RosterAgent:
             )
             return resp.text
         except Exception as e:
+
             return f"🚨 Error: {str(e)}"
