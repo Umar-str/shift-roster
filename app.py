@@ -9,7 +9,6 @@ SHIFT_REPO = ["Morning", "Evening", "Night", "OFF"]
 
 st.set_page_config(page_title="Roster Lab", layout="wide")
 
-# CSS - Restored all previous styling
 st.markdown("""
 <style>
     .stTextArea textarea { border: 2px solid #007BFF !important; }
@@ -27,12 +26,11 @@ if "latest_draft" not in st.session_state:
 if "roster_agent" not in st.session_state:
     st.session_state.roster_agent = RosterAgent(st.secrets["GEMINI_API_KEY"])
 
-# --- SIDEBAR (Restored Shift Names & Reference) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.title("🏥 Roster Hub")
     
     with st.expander("👨‍⚕️ Staff Reference", expanded=True):
-        st.markdown(f"**Allowed Shifts:** {', '.join(SHIFT_REPO)}")
         st.markdown("""
         **Doctors & Anesth**
         - Mark (Doc)
@@ -74,34 +72,14 @@ if st.button("🚀 Generate Roster Draft", type="primary", use_container_width=T
             sys_r, hard_r, soft_r, st.session_state.history, SHIFT_REPO
         )
 
-# --- DISPLAY, EXPORT & SAVE ---
+# --- DISPLAY & SAVE ---
 if st.session_state.latest_draft:
     st.divider()
+    st.subheader("📋 Current Draft Preview")
     
-    # Export Section
-    head_col1, head_col2 = st.columns([0.7, 0.3])
-    with head_col1:
-        st.subheader("📋 Current Draft Preview")
-    
-    # ROBUST EXPORT LOGIC
-    try:
-        # Extract rows that start with | to isolate the table
-        rows = [line for line in st.session_state.latest_draft.split('\n') if line.strip().startswith('|')]
-        if len(rows) > 2:
-            table_str = '\n'.join(rows)
-            df_export = pd.read_html(io.StringIO(table_str), flavor='bs4')[0]
-            # Clean HTML tags for the CSV file
-            df_export = df_export.map(lambda x: re.sub('<[^<]+?>', '', str(x)) if isinstance(x, str) else x)
-            csv = df_export.to_csv(index=False).encode('utf-8')
-            with head_col2:
-                st.download_button("📥 Download CSV", data=csv, file_name="hospital_roster.csv", mime="text/csv", use_container_width=True)
-    except Exception as e:
-        with head_col2:
-            st.info("💡 Generate a table to enable CSV export.")
-
     st.markdown(st.session_state.latest_draft, unsafe_allow_html=True)
 
-    if st.button("💾 Save to Sidebar History", type="primary", use_container_width=True):
+    if st.button("💾 Save to Sidebar History", use_container_width=True):
         st.session_state.history.append(st.session_state.latest_draft)
         st.success(f"Version {len(st.session_state.history)} saved!")
         st.rerun()
