@@ -10,30 +10,26 @@ class RosterAgent:
     def generate_roster(self, sys_rules, hard_rules, soft_rules, history, shift_repo):
         past_context = ""
         for i, entry in enumerate(history[-2:]):
-            past_context += f"\n[VERSION {i+1}]:\n{entry}\n"
+            past_context += f"\n[PREVIOUS VERSION {i+1}]:\n{entry}\n"
 
         allowed_shifts = ", ".join(shift_repo)
 
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
-        GOAL: Create a 7-day roster.
-        SHIFT OPTIONS: {"Morning","Evening","Night"}
+        GOAL: Create a 7-day roster. 
+        ALLOWED SHIFTS: {allowed_shifts}
 
-        STAFF LIST:
-        Mark (Doc), Shawn (Anesth), Axel (Surgeon), Sarah (Surgeon), 
-        Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
+        STAFF: Mark (Doc), Shawn (Anesth), Axel (Surgeon), Sarah (Surgeon), Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
 
-        FORMATTING RULES:
-        1. Name Column: Use exactly: **Name** <br><small>Designation</small>
-        2. Column Headers: Name & Role, Mon, Tue, Wed, Thu, Fri, Sat, Sun.
+        OUTPUT INSTRUCTIONS:
+        1. Produce a Markdown table with EXACTLY these 9 columns: 
+           | Name | Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+        2. Do NOT use HTML tags in the table.
+        3. Use only the allowed shifts or "OFF".
+        4. Provide a 'Compliance Report' as a separate list below the table.
 
-        INSTRUCTIONS:
-        - Rules: {sys_rules} | {hard_rules} | {soft_rules}
-        - History: {past_context if past_context else "None."}
-
-        MANDATORY SELF-AUDIT:
-        After the table, provide a 'Compliance Report'. 
-        Verify every rule and mark as [PASSED] or [FAILED].
+        RULES: {sys_rules} | {hard_rules} | {soft_rules}
+        HISTORY: {past_context if past_context else "None."}
         """
 
         try:
@@ -43,6 +39,4 @@ class RosterAgent:
             )
             return resp.text
         except Exception as e:
-
             return f"🚨 Error: {str(e)}"
-
