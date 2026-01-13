@@ -1,20 +1,22 @@
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-1.5-flash"
 
 class RosterAgent:
     def __init__(self, api_key):
         self.client = genai.Client(api_key=api_key, vertexai=False)
 
     def generate_roster(self, sys_rules, hard_rules, soft_rules, history):
-        # Format history for context
-        past_context = "\n".join(history[-2:]) if history else "No previous history."
+        # Convert history list into context
+        past_context = ""
+        for i, entry in enumerate(history[-2:]):
+            past_context += f"\nPrevious Version {i+1}:\n{entry}\n"
 
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
         
-        STAFF LIST (10 Employees):
+        STAFF & DESIGNATIONS:
         1. Mark (Doctor - Lead)
         2. Shawn (Anesthesiologist)
         3. Axel (Surgeon)
@@ -26,23 +28,23 @@ class RosterAgent:
         9. Maya (Nurse)
         10. Leo (Nurse)
 
-        REQUIRED FORMAT:
-        A Markdown table with exactly these columns:
-        [Employee Name & Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun]
+        REQUIRED TABLE FORMAT:
+        | Employee (Designation) | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+        | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 
         CONSTRAINTS:
         - SYSTEM: {sys_rules}
         - HARD: {hard_rules}
         - SOFT: {soft_rules}
-        - MANDATORY: Every single person MUST have exactly one "OFF" day.
+        - MANDATORY: Every person MUST have exactly one "OFF" day.
 
-        HISTORY CONTEXT:
-        {past_context}
+        HISTORY FROM PREVIOUS RUNS:
+        {past_context if history else "No previous history."}
 
         INSTRUCTIONS:
-        - Use "Morning", "Afternoon", "Night", and "OFF" as shift labels.
-        - Ensure every row starts with the Name and Designation (e.g., 'Mark (Doctor)').
-        - Provide a 'Compliance Report' after the table.
+        1. Use "Morning", "Afternoon", "Night", or "OFF".
+        2. Conduct a self-audit: Does every row have one "OFF"?
+        3. Output the Markdown table first, then a Compliance Report.
         """
 
         try:
