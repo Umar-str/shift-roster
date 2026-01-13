@@ -8,35 +8,40 @@ class RosterAgent:
         self.client = genai.Client(api_key=api_key)
 
     def generate_roster(self, sys_rules, hard_rules, soft_rules, history, shift_repo):
+        # Build context from the additive history
         past_context = ""
-        for i, entry in enumerate(history[-2:]):
-            past_context += f"\n[VERSION {i+1}]:\n{entry}\n"
+        for i, entry in enumerate(history):
+            past_context += f"\n--- VERSION {i+1} ---\n{entry}\n"
 
         allowed_shifts = ", ".join(shift_repo)
 
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
-        GOAL: Create a 7-day roster. 
-        ALLOWED SHIFTS: {allowed_shifts}
+        TASK: Create a 7-day roster.
+        ALLOWED SHIFTS: {"Morning","Evening","Night"} or OFF.
+
+        STRICT FORMATTING:
+        - Output a Markdown table with EXACTLY 8 columns: | Name & Role | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+        - Inside the 'Name & Role' cell, use this format: **Name** <br><small>Designation</small>
+        - Do NOT create a separate column for Designation.
 
         STAFF: Mark (Doc), Shawn (Anesth), Axel (Surgeon), Sarah (Surgeon), Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
 
-        TABLE FORMAT:
-        | Name | Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+        RULES:
+        [SYSTEM]: {sys_rules}
+        [HARD]: {hard_rules}
+        [SOFT]: {soft_rules}
 
-        INSTRUCTIONS:
-        1. Fill the table using only the allowed shifts or "OFF".
-        2. Do not use HTML inside the table cells.
-        3. Perform a 'Self-Audit Compliance Report' after the table.
-
-        RULES: {sys_rules} | {hard_rules} | {soft_rules}
+        SESSION HISTORY (Reference for changes):
+        {past_context if past_context else "Initial run."}
         """
 
         try:
             resp = self.client.models.generate_content(
-                model=MODEL_NAME, contents=prompt,
+                model=MODEL_NAME, 
+                contents=prompt,
                 config=types.GenerateContentConfig(temperature=0.1)
             )
             return resp.text
         except Exception as e:
-            return f"🚨 AI Error: {str(e)}"
+            return f"🚨 Error: {str(e)}"
