@@ -1,4 +1,7 @@
 import streamlit as st
+import pandas as pd
+import io
+import re
 from brain import RosterAgent
 
 # --- CONFIG ---
@@ -6,7 +9,6 @@ SHIFT_REPO = ["Morning", "Evening", "Night", "OFF"]
 
 st.set_page_config(page_title="Roster Lab", layout="wide")
 
-# CSS to ensure subtext looks clean and gray
 st.markdown("""
 <style>
     .stTextArea textarea { border: 2px solid #007BFF !important; }
@@ -24,23 +26,23 @@ if "latest_draft" not in st.session_state:
 if "roster_agent" not in st.session_state:
     st.session_state.roster_agent = RosterAgent(st.secrets["GEMINI_API_KEY"])
 
-# --- SIDEBAR: STAFF LIST & ADDITIVE HISTORY ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.title("🏥 Roster Hub")
     
-    # RESTORED: Staff List Reference
-    with st.expander("👨‍⚕️ Staff & Designations", expanded=True):
+    with st.expander("👨‍⚕️ Staff Reference", expanded=True):
         st.markdown("""
-        - **Mark** (Doc)
-        - **Shawn** (Anesth)
-        - **Axel** (Surgeon)
-        - **Sarah** (Surgeon)
-        - **Elena** (Nurse)
-        - **David** (Nurse)
-        - **Chloe** (Nurse)
-        - **James** (Nurse)
-        - **Maya** (Nurse)
-        - **Leo** (Nurse)
+        **Doctors & Anesth**
+        - Mark (Doc)
+        - Shawn (Anesth)
+        
+        **Surgeons**
+        - Axel (Surgeon)
+        - Sarah (Surgeon)
+        
+        **Nursing Staff**
+        - Elena, David, Chloe
+        - James, Maya, Leo
         """)
     
     st.divider()
@@ -50,39 +52,49 @@ with st.sidebar:
         st.rerun()
     
     st.subheader("📜 Version History")
-    # Additive log: newest at top, nothing removed
     for i, content in enumerate(reversed(st.session_state.history)):
-        version_num = len(st.session_state.history) - i
-        with st.expander(f"Version {version_num}"):
-            st.text_area("Copyable Markdown", value=content, height=150, key=f"copy_{i}")
+        v_num = len(st.session_state.history) - i
+        with st.expander(f"Version {v_num}"):
+            st.text_area("Markdown Code", value=content, height=150, key=f"copy_{i}")
             st.markdown("---")
             st.markdown(content, unsafe_allow_html=True)
 
 # --- MAIN UI ---
 st.title("Surgery Unit Roster Lab")
 c1, c2, c3 = st.columns(3)
-with c1: 
-    sys_r = st.text_area("🛠️ System Rules", value="- Exactly 1 OFF day per person.", height=150)
-with c2: 
-    hard_r = st.text_area("⛔ Hard Rules", value="- Mark works Day shifts.", height=150)
-with c3: 
-    soft_r = st.text_area("💡 Soft Rules", value="- Elena prefers Morning.", height=150)
+with c1: sys_r = st.text_area("🛠️ System Rules", value="- Exactly 1 OFF day per person.", height=150)
+with c2: hard_r = st.text_area("⛔ Hard Rules", value="- Mark works Day shifts.", height=150)
+with c3: soft_r = st.text_area("💡 Soft Rules", value="- Elena prefers Morning.", height=150)
 
 if st.button("🚀 Generate Roster Draft", type="primary", use_container_width=True):
-    with st.spinner("AI is applying rules..."):
-        res = st.session_state.roster_agent.generate_roster(
+    with st.spinner("AI Generating..."):
+        st.session_state.latest_draft = st.session_state.roster_agent.generate_roster(
             sys_r, hard_r, soft_r, st.session_state.history, SHIFT_REPO
         )
-        st.session_state.latest_draft = res
 
-# --- DISPLAY & SAVE ---
+# --- DISPLAY, EXPORT & SAVE ---
 if st.session_state.latest_draft:
     st.divider()
-    st.subheader("Current Draft")
+    
+    # Header area with Export Button
+    head_col1, head_col2 = st.columns([0.8, 0.2])
+    with head_col1:
+        st.subheader("📋 Current Draft Preview")
+    
+    # Export to CSV Logic
+    table_match = re.search(r'(\|.*\|[\s\S]*?\|)', st.session_state.latest_draft)
+    if table_match:
+        try:
+            df_export = pd.read_html(io.StringIO(table_match.group(1)), flavor='bs4')[0]
+            csv = df_export.to_csv(index=False).encode('utf-8')
+            with head_col2:
+                st.download_button("📥 Export to CSV", data=csv, file_name="roster_export.csv", mime="text/csv")
+        except:
+            pass
+
     st.markdown(st.session_state.latest_draft, unsafe_allow_html=True)
 
     if st.button("💾 Save to Sidebar History", use_container_width=True):
-        # Additive save
         st.session_state.history.append(st.session_state.latest_draft)
-        st.success(f"Version {len(st.session_state.history)} saved to sidebar!")
+        st.success(f"Version {len(st.session_state.history)} saved!")
         st.rerun()

@@ -20,8 +20,8 @@ class RosterAgent:
         ALLOWED SHIFTS: {"Morning","Evening","Night"} or OFF.
 
         STRICT FORMATTING:
-        - Output a Markdown table with EXACTLY 8 columns.
-        - 'Name & Role' column must use: **Name** <br><small>Designation</small>
+        - Markdown table, EXACTLY 8 columns.
+        - Column 1: **Name** <br><small>Designation</small>
         
         STAFF: Mark (Doc), Shawn (Anesth), Axel (Surgeon), Sarah (Surgeon), Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
 
@@ -30,10 +30,9 @@ class RosterAgent:
         [HARD]: {hard_rules}
         [SOFT]: {soft_rules}
 
-        SESSION HISTORY:
-        {past_context if past_context else "Initial run."}
+        HISTORY: {past_context if past_context else "Initial run."}
 
-        MANDATORY: Provide a 'Self-Audit Compliance Report' after the table.
+        MANDATORY: Provide a BRIEF 'Self-Audit Report' (Short bullet points) after the table.
         """
 
         try:
