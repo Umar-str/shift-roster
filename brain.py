@@ -1,7 +1,6 @@
 from google import genai
 from google.genai import types
 
-# Updated to the version working for you
 MODEL_NAME = "gemini-2.5-flash"
 
 class RosterAgent:
@@ -15,13 +14,11 @@ class RosterAgent:
 
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
-        GOAL: Create a 7-day roster for 10 staff members.
+        GOAL: Create a 7-day roster (Mon-Sun) for 10 staff members.
 
-        STAFF LIST:
-        Mark (Doctor), Shawn (Anesthesiologist), Axel (Surgeon), Sarah (Surgeon),
-        Elena (Nurse), David (Nurse), Chloe (Nurse), James (Nurse), Maya (Nurse), Leo (Nurse).
+        STAFF: Mark (Doc), Shawn (Anesth), Axel/Sarah (Surgeons), Elena/David/Chloe/James/Maya/Leo (Nurses).
 
-        REQUIRED FORMAT (EXCEL-READY):
+        FORMAT:
         Output a Markdown table with EXACTLY these 9 columns:
         | Name | Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
         | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -33,12 +30,12 @@ class RosterAgent:
         - MANDATORY: Every person MUST have exactly one "OFF" day.
 
         SESSION MEMORY:
-        {past_context if past_context else "Initial run."}
+        {past_context if past_context else "No history yet."}
 
         INSTRUCTIONS:
-        1. Fill shifts: "Morning", "Afternoon", "Night", or "OFF".
-        2. Ensure Name and Designation are in separate columns.
-        3. Finish with a 'Compliance Report' checking the 'OFF' day rule.
+        1. Start IMMEDIATELY with the Markdown table. No code blocks.
+        2. Use labels: "Morning", "Afternoon", "Night", or "OFF".
+        3. Finish with a 'Compliance Report' verifying the "OFF" day rule.
         """
 
         try:
@@ -49,4 +46,6 @@ class RosterAgent:
             )
             return resp.text
         except Exception as e:
-            return f"🚨 API Error: {str(e)}"
+            if "503" in str(e):
+                return "🚨 **Server Overloaded (503):** Gemini is busy. Please click the button again in 5 seconds."
+            return f"🚨 **API Error:** {str(e)}"
