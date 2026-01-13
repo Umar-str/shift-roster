@@ -1,38 +1,48 @@
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-2.5-flash-lite"
+MODEL_NAME = "gemini-2.5-flash"
 
 class RosterAgent:
     def __init__(self, api_key):
         self.client = genai.Client(api_key=api_key, vertexai=False)
 
     def generate_roster(self, sys_rules, hard_rules, soft_rules, history):
-        # Convert history list into a readable string for the AI
-        history_context = ""
-        for i, entry in enumerate(history[-3:]): # Only give last 3 to save tokens
-            history_context += f"\nVERSION {i+1}:\n{entry['content']}\n"
+        # Format history for context
+        past_context = "\n".join(history[-2:]) if history else "No previous history."
 
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
         
-        <context_history>
-        Below are the previous rosters generated in this session. 
-        Analyze them to avoid repeating same mistakes or to follow the established pattern:
-        {history_context if history_context else "No previous history."}
-        </context_history>
+        STAFF LIST (10 Employees):
+        1. Mark (Doctor - Lead)
+        2. Shawn (Anesthesiologist)
+        3. Axel (Surgeon)
+        4. Sarah (Surgeon)
+        5. Elena (Nurse)
+        6. David (Nurse)
+        7. Chloe (Nurse)
+        8. James (Nurse)
+        9. Maya (Nurse)
+        10. Leo (Nurse)
 
-        <current_requirements>
-        System: {sys_rules}
-        Hard: {hard_rules}
-        Soft: {soft_rules}
-        - MANDATORY: Every person must have exactly ONE 'OFF' day.
-        </current_requirements>
+        REQUIRED FORMAT:
+        A Markdown table with exactly these columns:
+        [Employee Name & Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun]
+
+        CONSTRAINTS:
+        - SYSTEM: {sys_rules}
+        - HARD: {hard_rules}
+        - SOFT: {soft_rules}
+        - MANDATORY: Every single person MUST have exactly one "OFF" day.
+
+        HISTORY CONTEXT:
+        {past_context}
 
         INSTRUCTIONS:
-        1. Generate a NEW 7-day Markdown table.
-        2. Conduct a self-audit to ensure all staff (Mark, Shawn, Axel, Sarah, Elena, David, Chloe, James, Maya, Leo) have a holiday.
-        3. Mention in your report if you successfully adjusted based on previous history.
+        - Use "Morning", "Afternoon", "Night", and "OFF" as shift labels.
+        - Ensure every row starts with the Name and Designation (e.g., 'Mark (Doctor)').
+        - Provide a 'Compliance Report' after the table.
         """
 
         try:
