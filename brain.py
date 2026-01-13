@@ -2,7 +2,7 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-MODEL_NAME = "gemini-3-flash-preview"
+MODEL_NAME = "gemini-3-flash"
 
 class RosterAgent:
     def __init__(self, api_key):
@@ -57,4 +57,5 @@ class RosterAgent:
                 max_output_tokens=2000
             )
         )
+
         return resp.text
