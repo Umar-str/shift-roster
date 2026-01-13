@@ -10,42 +10,35 @@ class RosterAgent:
     def generate_roster(self, sys_rules, hard_rules, soft_rules, history, shift_repo):
         past_context = ""
         for i, entry in enumerate(history[-2:]):
-            past_context += f"\n[PAST VERSION {i+1}]:\n{entry}\n"
+            past_context += f"\n[VERSION {i+1}]:\n{entry}\n"
 
-        # Dynamically inject the shifts you defined in app.py
-        allowed_shifts = ", ".join(shift_repo.keys())
+        allowed_shifts = ", ".join(shift_repo)
 
         prompt = f"""
         ACT AS: Senior Hospital Staffing Coordinator.
-        GOAL: Generate a 7-day roster.
-
-        ALLOWED SHIFTS: {"Morning","Evening","Night"}
+        GOAL: Create a 7-day roster.
+        SHIFT OPTIONS: {"Morning","Evening","Night"}
 
         STAFF: Mark (Doc), Shawn (Anesth), Axel/Sarah (Surgeons), Elena/David/Chloe/James/Maya/Leo (Nurses).
 
-        FORMATTING:
-        - Column 1: **Name** <br><small>Designation</small>
-        - Columns 2-8: Mon, Tue, Wed, Thu, Fri, Sat, Sun.
+        FORMATTING RULES:
+        1. Name Column: Use exactly: **Name** <br><small>Designation</small>
+        2. Column Headers: Name & Role, Mon, Tue, Wed, Thu, Fri, Sat, Sun.
 
-        CONSTRAINTS:
-        - SYSTEM: {sys_rules}
-        - HARD: {hard_rules}
-        - SOFT: {soft_rules}
+        INSTRUCTIONS:
+        - Rules: {sys_rules} | {hard_rules} | {soft_rules}
+        - History: {past_context if past_context else "None."}
 
-        HISTORY:
-        {past_context if past_context else "Initial run."}
-
-        MANDATORY FINAL TASK:
-        Perform a 'Self-Audit Compliance Report' after the table. 
-        Verify if every row and column meets the provided rules.
+        MANDATORY SELF-AUDIT:
+        After the table, provide a 'Compliance Report'. 
+        Verify every rule and mark as [PASSED] or [FAILED].
         """
 
         try:
             resp = self.client.models.generate_content(
-                model=MODEL_NAME,
-                contents=prompt,
+                model=MODEL_NAME, contents=prompt,
                 config=types.GenerateContentConfig(temperature=0.1)
             )
             return resp.text
         except Exception as e:
-            return f"🚨 API Error: {str(e)}"
+            return f"🚨 Error: {str(e)}"
