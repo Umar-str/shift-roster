@@ -31,6 +31,9 @@ with st.sidebar:
     st.title("🏥 Roster Hub")
     
     with st.expander("👨‍⚕️ Staff Reference", expanded=True):
+        # Shifts clearly visible here
+        st.info(f"**Allowed Shifts:** {', '.join(SHIFT_REPO)}")
+        
         st.markdown("""
         **Doctors & Anesth**
         - Mark (Doc)
