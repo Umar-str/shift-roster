@@ -1,7 +1,7 @@
 [theme]
 primaryColor = "#007BFF"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
+secondaryBackgroundColor = "#F7F9FB"
 textColor = "#262730"
 font = "sans serif"
 
@@ -9,3 +9,5 @@ font = "sans serif"
 headless = true
 enableCORS = false
 enableXsrfProtection = false
+# This prevents the "infinite loading" skeleton screen
+enableWebsocketCompression = false
