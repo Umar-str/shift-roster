@@ -2,7 +2,7 @@ from google import genai
 from google.genai import types
 
 # Using the 2026 stable Flash model
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-2.5-flash"
 
 class RosterAgent:
     def __init__(self, api_key):
@@ -54,3 +54,4 @@ class RosterAgent:
             return resp.text
         except Exception as e:
             return f"🚨 API Error: {str(e)}"
+
