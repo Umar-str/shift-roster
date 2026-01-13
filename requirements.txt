@@ -1,2 +1,6 @@
 streamlit
 google-genai
+pandas
+xlsxwriter
+lxml
+beautifulsoup4
