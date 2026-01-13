@@ -1,67 +1,70 @@
 import streamlit as st
-import pandas as pd
-import io
 from brain import RosterAgent
 
-st.set_page_config(page_title="Hospital Roster AI", layout="wide")
+st.set_page_config(page_title="Surgery Roster Lab", layout="wide")
 
-# Initialize Session State
+# --- Initialize Session State ---
 if "roster_agent" not in st.session_state:
     if "GEMINI_API_KEY" in st.secrets:
         st.session_state.roster_agent = RosterAgent(st.secrets["GEMINI_API_KEY"])
     else:
-        st.error("Missing GEMINI_API_KEY in Secrets!")
+        st.error("Missing GEMINI_API_KEY in Streamlit Secrets.")
 
 if "history" not in st.session_state:
     st.session_state.history = []
 if "latest_roster" not in st.session_state:
-    st.session_state.latest_roster = None
+    st.session_state.latest_roster = ""
 
-st.title("🏥 Hospital Shift Roster Lab")
+# --- Sidebar: Staff & History ---
+with st.sidebar:
+    st.title("👨‍⚕️ Staff Directory")
+    st.markdown("""
+    **Doctors**
+    - Mark (Lead)
+    - Shawn (Anesth.)
+    
+    **Surgeons**
+    - Axel
+    - Sarah
+    
+    **Nurses**
+    - Elena, David, Chloe, 
+    - James, Maya, Leo
+    """)
+    
+    st.divider()
+    st.subheader("📜 Session History")
+    if st.button("Clear Session Memory"):
+        st.session_state.history = []
+        st.session_state.latest_roster = ""
+        st.rerun()
+    
+    for i, res in enumerate(reversed(st.session_state.history)):
+        with st.expander(f"Version {len(st.session_state.history)-i}"):
+            st.caption("Click to view previous result")
+            st.text(res[:100] + "...") # Preview
 
-# UI Columns
+# --- Main UI ---
+st.title("🏥 Surgery Unit Roster Generator")
+
 c1, c2, c3 = st.columns(3)
 with c1:
-    sys_rules = st.text_area("System Rules", value="- Every person must have exactly 1 Holiday (OFF).", height=150)
+    sys_r = st.text_area("System Rules", value="- Exactly 1 Holiday (OFF) per person.", height=150)
 with c2:
-    hard_rules = st.text_area("Hard Rules", value="- Mark (Doctor) must work all Day shifts.", height=150)
+    hard_r = st.text_area("Hard Rules", value="- Mark (Doctor) works Morning shifts.\n- Axel is OFF Wednesday.", height=150)
 with c3:
-    soft_rules = st.text_area("Soft Rules", value="- Prefer Morning shifts for Elena.", height=150)
+    soft_r = st.text_area("Soft Rules", value="- Try to pair James and Chloe.", height=150)
 
 if st.button("Generate Roster", type="primary", use_container_width=True):
-    with st.spinner("AI is generating your roster..."):
+    with st.spinner("Analyzing rules and history..."):
         result = st.session_state.roster_agent.generate_roster(
-            sys_rules, hard_rules, soft_rules, st.session_state.history
+            sys_r, hard_r, soft_r, st.session_state.history
         )
-        st.session_state.history.append(result)
         st.session_state.latest_roster = result
+        st.session_state.history.append(result)
 
-# Results and Export
+# --- Output Display ---
 if st.session_state.latest_roster:
     st.divider()
+    st.success("✨ Roster Generated! Copy the table below directly into Excel.")
     st.markdown(st.session_state.latest_roster)
-    
-    try:
-        # Use pandas to grab the table from markdown
-        df_list = pd.read_html(io.StringIO(st.session_state.latest_roster), flavor='bs4')
-        if df_list:
-            df = df_list[0]
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Roster')
-            
-            st.download_button(
-                label="📥 Download Roster as Excel",
-                data=buffer.getvalue(),
-                file_name="hospital_roster.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-    except:
-        st.info("Table found. Adjusting export settings...")
-
-# Sidebar History
-with st.sidebar:
-    st.subheader("History Log")
-    if st.button("Clear Memory"):
-        st.session_state.history = []
-        st.rerun()
