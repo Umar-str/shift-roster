@@ -1,73 +1,59 @@
-import streamlit as st
-import pandas as pd
-import io
-from brain import RosterAgent
+from google import genai
+from google.genai import types
 
-st.set_page_config(page_title="Hospital Roster AI", layout="wide")
+MODEL_NAME = "gemini-1.5-flash"
 
-# Initialize Roster Agent & History
-if "roster_agent" not in st.session_state:
-    st.session_state.roster_agent = RosterAgent(st.secrets["GEMINI_API_KEY"])
-if "history" not in st.session_state:
-    st.session_state.history = []
+class RosterAgent:
+    def __init__(self, api_key):
+        self.client = genai.Client(api_key=api_key, vertexai=False)
 
-st.title("🏥 Smart Hospital Roster Generator")
+    def generate_roster(self, sys_rules, hard_rules, soft_rules, history):
+        # Format history for context
+        past_context = "\n".join(history[-2:]) if history else "No previous history."
 
-# Sidebar for History
-with st.sidebar:
-    st.header("📜 Roster History")
-    if st.button("Clear History"):
-        st.session_state.history = []
-    for i, entry in enumerate(st.session_state.history):
-        st.write(f"Version {i+1}: {entry['timestamp']}")
-
-# Input Layout
-col1, col2, col3 = st.columns(3)
-with col1:
-    sys_rules = st.text_area("System Rules (Mandatory)", value="Min 2 nurses per night shift.")
-with col2:
-    hard_rules = st.text_area("Hard Rules (Strict)", value="Mark cannot work Mondays.")
-with col3:
-    soft_rules = st.text_area("Soft Rules (Preferences)", value="Elena prefers mornings.")
-
-if st.button("Generate Roster", type="primary"):
-    with st.spinner("Analyzing history and creating new roster..."):
-        # Pass history to the agent
-        result = st.session_state.roster_agent.generate_roster(
-            sys_rules, hard_rules, soft_rules, st.session_state.history
-        )
+        prompt = f"""
+        ACT AS: Senior Hospital Staffing Coordinator.
         
-        # Save to history
-        import datetime
-        st.session_state.history.append({
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "content": result
-        })
-        
-        st.markdown(result)
+        STAFF LIST (10 Employees):
+        1. Mark (Doctor - Lead)
+        2. Shawn (Anesthesiologist)
+        3. Axel (Surgeon)
+        4. Sarah (Surgeon)
+        5. Elena (Nurse)
+        6. David (Nurse)
+        7. Chloe (Nurse)
+        8. James (Nurse)
+        9. Maya (Nurse)
+        10. Leo (Nurse)
 
-# Export to Excel Section
-if st.session_state.history:
-    st.divider()
-    st.subheader("📥 Export Latest Roster")
-    
-    # Simple logic to try and parse the MD table for Excel export
-    last_roster = st.session_state.history[-1]['content']
-    try:
-        # Extract table part (crude markdown to list parsing)
-        tables = pd.read_html(io.StringIO(last_roster), flavor='bs4')
-        if tables:
-            df = tables[0]
-            
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Roster')
-            
-            st.download_button(
-                label="Download as Excel",
-                data=buffer.getvalue(),
-                file_name="hospital_roster.xlsx",
-                mime="application/vnd.ms-excel"
+        REQUIRED FORMAT:
+        A Markdown table with exactly these columns:
+        [Employee Name & Designation | Mon | Tue | Wed | Thu | Fri | Sat | Sun]
+
+        CONSTRAINTS:
+        - SYSTEM: {sys_rules}
+        - HARD: {hard_rules}
+        - SOFT: {soft_rules}
+        - MANDATORY: Every single person MUST have exactly one "OFF" day.
+
+        HISTORY CONTEXT:
+        {past_context}
+
+        INSTRUCTIONS:
+        - Use "Morning", "Afternoon", "Night", and "OFF" as shift labels.
+        - Ensure every row starts with the Name and Designation (e.g., 'Mark (Doctor)').
+        - Provide a 'Compliance Report' after the table.
+        """
+
+        try:
+            resp = self.client.models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                    thinking_config=types.ThinkingConfig(include_thoughts=False)
+                )
             )
-    except:
-        st.info("Generating exportable table...")
+            return resp.text
+        except Exception as e:
+            return f"🚨 API Error: {str(e)}"

@@ -46,5 +46,4 @@ class RosterAgent:
             )
             return resp.text
         except Exception as e:
-
             return f"🚨 API Error: {str(e)}"
